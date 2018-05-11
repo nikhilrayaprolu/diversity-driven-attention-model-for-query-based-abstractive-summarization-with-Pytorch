@@ -19,3 +19,11 @@ WORKING_DIR = "../data/1/"
 # Property: batch_size:
 # Batch size for training
 BATCH_SIZE = 64
+# Property: num_epochs:
+# Number of maximum epochs
+MAX_EPOCHS = 50
+# Property: Early stop:
+# Number of epochs for early stop criteria	
+EARLY_STOP = 5
+
+PRINT_FREQUENCY = 100
