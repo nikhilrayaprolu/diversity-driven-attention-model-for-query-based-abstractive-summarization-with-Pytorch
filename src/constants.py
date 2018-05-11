@@ -25,5 +25,10 @@ MAX_EPOCHS = 50
 # Property: Early stop:
 # Number of epochs for early stop criteria	
 EARLY_STOP = 5
-
 PRINT_FREQUENCY = 100
+# Property : hidden_size:
+# RNN cell size
+HIDDEN_SIZE = 400
+# Property: learning_rate:
+# Learning rate to be used for training.
+LEARNING_RATE = 0.0004
