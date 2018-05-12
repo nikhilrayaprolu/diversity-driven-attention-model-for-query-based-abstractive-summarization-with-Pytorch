@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, embed_size, hidden_size,
+    def __init__(self, input_size, embeddings, embed_size, hidden_size,
                  n_layers=1, dropout=0.5):
         super(Encoder, self).__init__()
         self.input_size = input_size
@@ -16,6 +16,12 @@ class Encoder(nn.Module):
         self.embed = nn.Embedding(input_size, embed_size)
         self.gru = nn.GRU(embed_size, hidden_size, n_layers,
                           dropout=dropout, bidirectional=True)
+        self.initialize(embeddings)
+
+    def initialize(self, embeddings):
+        # print(embeddings.shape, self.input_size)
+        assert (embeddings.shape[0] == self.input_size)
+        self.embed.weight = nn.Parameter(embeddings)
 
     def forward(self, src, hidden=None):
         embedded = self.embed(src)
@@ -27,10 +33,10 @@ class Encoder(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size, num):
         super(Attention, self).__init__()
         self.hidden_size = hidden_size
-        self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
+        self.attn = nn.Linear(self.hidden_size * num, hidden_size)
         self.v = nn.Parameter(torch.rand(hidden_size))
         stdv = 1. / math.sqrt(self.v.size(0))
         self.v.data.uniform_(-stdv, stdv)
@@ -52,7 +58,7 @@ class Attention(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, embed_size, hidden_size, output_size,
+    def __init__(self, embed_size, embeddings, hidden_size, output_size,
                  n_layers=1, dropout=0.2):
         super(Decoder, self).__init__()
         self.embed_size = embed_size
@@ -62,45 +68,59 @@ class Decoder(nn.Module):
 
         self.embed = nn.Embedding(output_size, embed_size)
         self.dropout = nn.Dropout(dropout, inplace=True)
-        self.attention = Attention(hidden_size)
+        self.query_attention = Attention(hidden_size, 2)
+        self.doc_attention = Attention(hidden_size, 3)
         self.gru = nn.GRU(hidden_size + embed_size, hidden_size,
                           n_layers, dropout=dropout)
         self.out = nn.Linear(hidden_size * 2, output_size)
+        self.initialize(embeddings)
 
-    def forward(self, input, last_hidden, encoder_outputs):
+    def initialize(self, embeddings):
+        assert (embeddings.size()[1] == self.embed_size)
+        self.embed.weight = nn.Parameter(embeddings)
+
+    def forward(self, input, last_hidden, query_outputs, encoder_outputs):
         # Get the embedding of the current input word (last output word)
         embedded = self.embed(input).unsqueeze(0)  # (1,B,N)
         embedded = self.dropout(embedded)
+        # calculate query attention
+        query_attn_weights = self.query_attention(last_hidden[-1], query_outputs)
+        query_context = query_attn_weights.bmm(query_outputs.transpose(0, 1))  # (B,1,N)
+        query_context = query_context.transpose(0, 1)  # (1,B,N)
+        
         # Calculate attention weights and apply to encoder outputs
-        attn_weights = self.attention(last_hidden[-1], encoder_outputs)
-        context = attn_weights.bmm(encoder_outputs.transpose(0, 1))  # (B,1,N)
-        context = context.transpose(0, 1)  # (1,B,N)
+        # print(last_hidden.size(), query_context.size())
+        doc_attn_weights = self.doc_attention(torch.cat([last_hidden, query_context], 2), encoder_outputs)
+        doc_context = doc_attn_weights.bmm(encoder_outputs.transpose(0, 1))  # (B,1,N)
+        doc_context = doc_context.transpose(0, 1)  # (1,B,N)
         # Combine embedded input word and attended context, run through RNN
-        rnn_input = torch.cat([embedded, context], 2)
+        rnn_input = torch.cat([embedded, doc_context], 2)
         output, hidden = self.gru(rnn_input, last_hidden)
         output = output.squeeze(0)  # (1,B,N) -> (B,N)
-        context = context.squeeze(0)
-        output = self.out(torch.cat([output, context], 1))
+        doc_context = doc_context.squeeze(0)
+        output = self.out(torch.cat([output, doc_context], 1))
         output = F.log_softmax(output)
-        return output, hidden, attn_weights
+        return output, hidden, doc_attn_weights
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder):
+    def __init__(self, content_encoder, query_encoder, decoder):
         super(Seq2Seq, self).__init__()
-        self.encoder = encoder
+        self.content_encoder = content_encoder
         self.decoder = decoder
+        self.query_encoder = query_encoder
 
-    def forward(self, src, trg, batch_size, max_len_target, teacher_forcing_ratio=0.5):
+    def forward(self, content_src, query_src, trg, batch_size, max_len_target, teacher_forcing_ratio=0.5):
         vocab_size = self.decoder.output_size
         outputs = Variable(torch.zeros(max_len_target, batch_size, vocab_size)) #.cuda()
 
-        encoder_output, hidden = self.encoder(src)
+        encoder_output, hidden = self.content_encoder(content_src)
+        query_output, query_hidden = self.query_encoder(query_src)
         hidden = hidden[:self.decoder.n_layers]
         output = Variable(trg[0, :])  # sos
         for t in range(1, max_len_target):
             output, hidden, attn_weights = self.decoder(
-                    output, hidden, encoder_output)
+                    output, hidden, query_output, encoder_output)
             outputs[t] = output
             is_teacher = random.random() < teacher_forcing_ratio
             top1 = output.data.max(1)[1]

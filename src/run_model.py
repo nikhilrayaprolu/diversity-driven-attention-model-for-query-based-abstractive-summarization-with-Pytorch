@@ -61,7 +61,7 @@ class run_model:
             #Todo embeddings - glove
             train_labels = Variable(train_labels)
             optimizer.zero_grad()
-            outputs = self.model(train_content, train_title, BATCH_SIZE, max_title)
+            outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
                                train_labels[1:].contiguous().view(-1)) #ignore index pad
             loss.backward()
@@ -182,9 +182,12 @@ def main():
     encoder_vocab_size = dataset.length_vocab_encode()
     decoder_vocab_size = dataset.length_vocab_decode()
     #Initialising Model
-    encoder = Encoder(encoder_vocab_size, EMBEDDING_SIZE, HIDDEN_SIZE)
-    decoder = Decoder(EMBEDDING_SIZE, HIDDEN_SIZE, decoder_vocab_size)
-    seq2seqwattn = Seq2Seq(encoder, decoder)
+    embeddings = dataset.vocab.embeddings
+    embeddings = torch.Tensor(embeddings)
+    content_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
+    query_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
+    decoder = Decoder(EMBEDDING_SIZE, embeddings, HIDDEN_SIZE, decoder_vocab_size)
+    seq2seqwattn = Seq2Seq(content_encoder, query_encoder, decoder)
 
     run_this = run_model(dataset, seq2seqwattn)
     run_this.run_training()
