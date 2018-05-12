@@ -298,7 +298,7 @@ class PadDataset:
 		self.vocab.construct_vocab(filenames_encode, filenames_decode, embedding_size, embedding_path,
 								   limit_encode, limit_decode)
 		#print (self.vocab.word_to_index_decode)
-	self.load_data(working_dir)
+		self.load_data(working_dir)
 
 
 	def length_vocab_encode(self):
