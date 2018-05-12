@@ -74,15 +74,15 @@ class run_model:
                 sys.stdout.flush()
                 # Evaluate against the training set.
                 print('Training Data Eval:')
-                self.print_titles(sess, self.dataset.datasets["train"], 2)
+                self.print_titles(self.dataset.datasets["train"], 2)
                 # Evaluate against the validation set.
                 print('Validation Data Eval:')
-                self.print_titles(sess,self.dataset.datasets["valid"], 2)    
+                self.print_titles(self.dataset.datasets["valid"], 2)    
                 sys.stdout.flush()
 
         return float(total_loss)/ float(steps_per_epoch)
 
-    def do_eval(self,sess, data_set):
+    def do_eval(self, data_set):
 
         """ Does a forward propogation on the data to know how the model's performance is.
              This will be mainly used for valid and test dataset.
@@ -109,7 +109,7 @@ class run_model:
 
 
 
-    def print_titles_in_files(self, sess, data_set):
+    def print_titles_in_files(self, data_set):
 
         """ Prints the titles for the requested examples.
 
@@ -121,7 +121,7 @@ class run_model:
         """
         return None
 
-    def print_titles(self, sess, data_set, total_examples):
+    def print_titles(self, data_set, total_examples):
 
         """ Prints the titles for the requested examples.
 
