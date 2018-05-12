@@ -25,7 +25,7 @@ MAX_EPOCHS = 50
 # Property: Early stop:
 # Number of epochs for early stop criteria	
 EARLY_STOP = 5
-PRINT_FREQUENCY = 100
+PRINT_FREQUENCY = 5
 # Property : hidden_size:
 # RNN cell size
 HIDDEN_SIZE = 400
