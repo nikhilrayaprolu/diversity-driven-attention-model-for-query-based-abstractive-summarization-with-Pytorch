@@ -11,13 +11,14 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 from torch.nn.utils import clip_grad_norm
 from torch.nn import functional as F
 from torch import optim
+from torch.autograd import Variable
 from optparse import OptionParser
 
 from dataset_iterator import *
 from constants import (EMBEDDING_SIZE, DIFF_VOCAB, EMBEDDING_PATH,
                        LIMIT_ENCODE, LIMIT_DECODE, WORKING_DIR,
                        BATCH_SIZE, MAX_EPOCHS, EARLY_STOP, PRINT_FREQUENCY,
-                       HIDDEN_SIZE, LEARNING_RATE)
+                       HIDDEN_SIZE, LEARNING_RATE, GRAD_CLIP)
 from seq2seq import Encoder, Decoder, Seq2Seq
 
 
@@ -58,12 +59,13 @@ class run_model:
             max_content, max_title, max_query = self.dataset.next_batch(self.dataset.datasets["train"],
                                                                         BATCH_SIZE, True)
             #Todo embeddings - glove
+            train_labels = Variable(train_labels)
             optimizer.zero_grad()
             outputs = self.model(train_content, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
-                               trg[1:].contiguous().view(-1)) #ignore index pad
+                               train_labels[1:].contiguous().view(-1)) #ignore index pad
             loss.backward()
-            clip_grad_norm(self.model.parameters(), grad_clip)
+            clip_grad_norm(self.model.parameters(), GRAD_CLIP)
             optimizer.step()
             total_loss += loss.data[0]
             duration = time.time() - start_time

@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 import sys
 import os.path
-import tensorflow as tf
+import torch
 import copy
 from vocab import *
 
@@ -181,7 +181,10 @@ class PadDataset:
         else:
             dt.global_count_test  = count1 % dt.number_of_samples
     
-
+        contents = torch.from_numpy(contents)
+        titles = torch.from_numpy(titles)
+        query = torch.from_numpy(query)
+        labels = torch.from_numpy(labels)
         return contents, titles, labels, query, weights, content_sequence_length, query_sequence_length, max_length_content, max_length_title, max_length_query
    
  

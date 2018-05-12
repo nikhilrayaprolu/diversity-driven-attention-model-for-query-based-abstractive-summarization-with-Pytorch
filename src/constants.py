@@ -32,3 +32,5 @@ HIDDEN_SIZE = 400
 # Property: learning_rate:
 # Learning rate to be used for training.
 LEARNING_RATE = 0.0004
+#Initial Learning rate
+GRAD_CLIP = 10.0
