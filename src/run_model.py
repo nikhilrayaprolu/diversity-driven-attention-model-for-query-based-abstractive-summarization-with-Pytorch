@@ -144,7 +144,7 @@ class run_model:
             print ("Epoch: " + str(epoch))
             start = time.time()
             train_loss = self.run_epoch(epoch)
-            valid_loss = self.do_eval(epoch, self.dataset.datasets["valid"])
+            valid_loss = self.do_eval(self.dataset.datasets["valid"])
             print ("Training Loss:{}".format(train_loss))
             print ("Validation Loss:{}".format(valid_loss))
 
