@@ -4,7 +4,7 @@ import random
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
-from lstm_diversity import DiverseLSTMCell
+from Models.lstm_diversity import DiverseLSTMCell
 
 class Encoder(nn.Module):
     def __init__(self, input_size, embeddings, embed_size, hidden_size,
