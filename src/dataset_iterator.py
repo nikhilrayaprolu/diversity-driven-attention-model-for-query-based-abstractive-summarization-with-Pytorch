@@ -181,10 +181,10 @@ class PadDataset:
 		else:
 			dt.global_count_test  = count1 % dt.number_of_samples
 	
-		contents = torch.from_numpy(contents)
-		titles = torch.from_numpy(titles)
-		query = torch.from_numpy(query)
-		labels = torch.from_numpy(labels)
+		contents = torch.from_numpy(contents).cuda()
+		titles = torch.from_numpy(titles).cuda()
+		query = torch.from_numpy(query).cuda()
+		labels = torch.from_numpy(labels).cuda()
 		return contents, titles, labels, query, weights, content_sequence_length, query_sequence_length, max_length_content, max_length_title, max_length_query
    
  

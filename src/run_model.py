@@ -221,7 +221,7 @@ def main():
     decoder_vocab_size = dataset.length_vocab_decode()
     #Initialising Model
     embeddings = dataset.vocab.embeddings
-    embeddings = torch.Tensor(embeddings)
+    embeddings = torch.Tensor(embeddings).cuda()
     content_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
     query_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
     decoder = Decoder(EMBEDDING_SIZE, embeddings, HIDDEN_SIZE, decoder_vocab_size)
