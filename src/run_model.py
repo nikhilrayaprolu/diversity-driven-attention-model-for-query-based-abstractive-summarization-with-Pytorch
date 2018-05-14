@@ -155,7 +155,7 @@ class run_model:
         train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
             max_content, max_title, max_query = self.dataset.next_batch(data_set,
                                                                         total_examples, False)
-        _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+        _decoder_states = self.model(train_content, train_query, train_title, total_examples, max_title)
         decoder_states = np.array([np.argmax(i,1) for i in _decoder_states_])
         ds = np.transpose(decoder_states)
         true_labels = np.transpose(train_labels)
