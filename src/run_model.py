@@ -18,7 +18,7 @@ from dataset_iterator import *
 from constants import (EMBEDDING_SIZE, DIFF_VOCAB, EMBEDDING_PATH,
                        LIMIT_ENCODE, LIMIT_DECODE, WORKING_DIR,
                        BATCH_SIZE, MAX_EPOCHS, EARLY_STOP, PRINT_FREQUENCY,
-                       HIDDEN_SIZE, LEARNING_RATE, GRAD_CLIP)
+                       HIDDEN_SIZE, LEARNING_RATE, GRAD_CLIP, OUTDIR)
 from seq2seq import Encoder, Decoder, Seq2Seq
 
 
@@ -99,15 +99,13 @@ class run_model:
         steps_per_epoch = int(math.ceil(float(data_set.number_of_samples) / float(BATCH_SIZE)))
         for step in xrange(1, steps_per_epoch+1):
             train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
-            max_content, max_title, max_query = self.dataset.next_batch(self.dataset.datasets["train"],
-                                                                        BATCH_SIZE, True)
-            outputs = self.model(train_content, train_title, BATCH_SIZE, max_title)
+            max_content, max_title, max_query = self.dataset.next_batch(data_set,
+                                                                        BATCH_SIZE, False)
+            outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
                                    trg[1:].contiguous().view(-1)) #ignore index pad
             total_loss += loss.data[0]
         return total_loss/steps_per_epoch
-
-
 
     def print_titles_in_files(self, data_set):
 
@@ -119,7 +117,30 @@ class run_model:
                 total_examples: Number of samples for which title is printed.
 
         """
-        return None
+        total_loss = 0
+        steps_per_epoch = int(math.ceil(float(dataset.number_of_samples)\
+                                        /float(BATCH_SIZE)))
+        f1 = open(OUTDIR + data_set.name + "_final_results", "wb")
+        for step in xrange(1, steps_per_epoch+1):
+            train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
+            max_content, max_title, max_query = self.dataset.next_batch(data_set,
+                                                                        BATCH_SIZE, False)
+            _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+            # Pack the list of size max_sequence_length to a tensor
+            decoder_states = np.array([np.argmax(i,1) for i in _decoder_states_])
+            # tensor will be converted to [batch_size * sequence_length * symbols]
+            ds = np.transpose(decoder_states)
+            true_labels = np.transpose(train_labels)
+            # Converts this to a length of batch sizes
+            final_ds = ds.tolist()
+            true_labels = true_labels.tolist()
+            for i, states in enumerate(final_ds):
+                # Get the index of the highest scoring symbol for each time step
+                s =  self.dataset.decode_to_sentence(states)
+                t =  self.dataset.decode_to_sentence(true_labels[i])
+                f1.write(s + "\n")
+                f1.write(t +"\n")
+
 
     def print_titles(self, data_set, total_examples):
 
@@ -131,8 +152,19 @@ class run_model:
                 total_examples: Number of samples for which title is printed.
 
         """
-        return None
-
+        train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
+            max_content, max_title, max_query = self.dataset.next_batch(data_set,
+                                                                        total_examples, False)
+        _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+        decoder_states = np.array([np.argmax(i,1) for i in _decoder_states_])
+        ds = np.transpose(decoder_states)
+        true_labels = np.transpose(train_labels)
+        final_ds = ds.tolist()
+        true_labels = true_labels.tolist()
+        for i,states in enumerate(final_ds):
+            # Get the index of the highest scoring symbol for each time step
+            print ("Title is " + self.dataset.decode_to_sentence(states))
+            print ("True Summary is " + self.dataset.decode_to_sentence(true_labels[i]))
 
     def run_training(self):
 
@@ -151,16 +183,17 @@ class run_model:
             if valid_loss <= best_val_loss:
                 best_val_loss = valid_loss
                 best_val_epoch = epoch
-                if not os.path.isdir(".save"):
-                    os.makedirs(".save")
-                torch.save(self.model.state_dict(), './.save/seq2seq_%d.pt' % (epoch))
+                if not os.path.isdir(OUTDIR):
+                    os.makedirs(OUTDIR)
+                torch.save(self.model.state_dict(), './%s/best_model.pt' %(OUTDIR))
             if epoch == MAX_EPOCHS:
-                torch.save(self.model.state_dict(), './.save/seq2seq_lastepoch.pt')
+                torch.save(self.model.state_dict(), './%s/seq2seq_lastepoch.pt' %(OUTDIR))
             if epoch - best_val_epoch > EARLY_STOP:
                 print ("Results are getting no better. Early Stopping")
                 break
             print ("Total time:{}".format(time.time() - start))
         # Todo - Restore the best model and evaluate
+        self.model.load_state_dict(torch.load('./%s/best_model.pt' %(OUTDIR)))
         test_loss = self.do_eval(self.dataset.datasets["test"])
         print ("Test Loss:{}".format(test_loss))
         self.print_titles_in_files(self.dataset.datasets["test"])
@@ -174,6 +207,7 @@ class run_model:
 
         print(max_query)
         return None
+
 
 def main():
     #Dataset

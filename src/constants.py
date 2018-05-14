@@ -34,3 +34,6 @@ HIDDEN_SIZE = 400
 LEARNING_RATE = 0.0004
 #Initial Learning rate
 GRAD_CLIP = 10.0
+# Property: outdir:
+# Path to the output directory where the model and the predictions will be saved
+OUTDIR = "output/"
