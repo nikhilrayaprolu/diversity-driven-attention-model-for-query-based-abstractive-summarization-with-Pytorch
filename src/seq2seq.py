@@ -100,7 +100,8 @@ class Decoder(nn.Module):
         distract_hidden = (distract_h, distract_c)
         # Combine embedded input word and attended context, run through RNN
         rnn_input = torch.cat([embedded, doc_context], 2)
-        output, hidden = self.gru(rnn_input, last_hidden)
+        output, hidden = self.gru(rnn_input, (last_hidden[0][-1].view(1,-1,self.hidden_size),\
+                                              last_hidden[1][-1].view(1,-1,self.hidden_size)))        
         output = output.squeeze(0)  # (1,B,N) -> (B,N)
         doc_context = doc_context.squeeze(0)
         output = self.out(torch.cat([output, doc_context], 1))
