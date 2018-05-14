@@ -222,10 +222,10 @@ def main():
     #Initialising Model
     embeddings = dataset.vocab.embeddings
     embeddings = torch.Tensor(embeddings).cuda()
-    content_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
-    query_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE)
-    decoder = Decoder(EMBEDDING_SIZE, embeddings, HIDDEN_SIZE, decoder_vocab_size)
-    seq2seqwattn = Seq2Seq(content_encoder, query_encoder, decoder)
+    content_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+    query_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+    decoder = Decoder(EMBEDDING_SIZE, embeddings, HIDDEN_SIZE, decoder_vocab_size).cuda()
+    seq2seqwattn = Seq2Seq(content_encoder, query_encoder, decoder).cuda()
 
     run_this = run_model(dataset, seq2seqwattn)
     run_this.run_training()
