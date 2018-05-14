@@ -35,6 +35,7 @@ class run_model:
 
         # Vocabulary and datasets are initialized.
         self.dataset = dataset
+        self.pad_index = self.dataset.vocab.encode_word_decoder("<pad>")
 
     def run_epoch(self, epoch_number, fp = None):
 
@@ -63,7 +64,7 @@ class run_model:
             optimizer.zero_grad()
             outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
-                               train_labels[1:].contiguous().view(-1)) #ignore index pad
+                               train_labels[1:].contiguous().view(-1), ignore_index=self.pad_index) #ignore index pad
             loss.backward()
             clip_grad_norm(self.model.parameters(), GRAD_CLIP)
             optimizer.step()
@@ -103,7 +104,7 @@ class run_model:
                                                                         BATCH_SIZE, False)
             outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
-                                   trg[1:].contiguous().view(-1)) #ignore index pad
+                                   train_labels[1:].contiguous().view(-1), ignore_index=self.pad_index) #ignore index pad
             total_loss += loss.data[0]
         return total_loss/steps_per_epoch
 
@@ -127,7 +128,9 @@ class run_model:
                                                                         BATCH_SIZE, False)
             _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             # Pack the list of size max_sequence_length to a tensor
-            decoder_states = np.array([np.argmax(i,1) for i in _decoder_states_])
+            temp = _decoder_states.data
+            temp = temp.numpy()
+            decoder_states = np.array([np.argmax(i,1) for i in temp])
             # tensor will be converted to [batch_size * sequence_length * symbols]
             ds = np.transpose(decoder_states)
             true_labels = np.transpose(train_labels)
@@ -140,7 +143,6 @@ class run_model:
                 t =  self.dataset.decode_to_sentence(true_labels[i])
                 f1.write(s + "\n")
                 f1.write(t +"\n")
-
 
     def print_titles(self, data_set, total_examples):
 
@@ -156,7 +158,9 @@ class run_model:
             max_content, max_title, max_query = self.dataset.next_batch(data_set,
                                                                         total_examples, False)
         _decoder_states = self.model(train_content, train_query, train_title, total_examples, max_title)
-        decoder_states = np.array([np.argmax(i,1) for i in _decoder_states_])
+        temp = _decoder_states.data
+        temp = temp.numpy()
+        decoder_states = np.array([np.argmax(i,1) for i in temp])
         ds = np.transpose(decoder_states)
         true_labels = np.transpose(train_labels)
         final_ds = ds.tolist()
