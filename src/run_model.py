@@ -119,7 +119,7 @@ class run_model:
 
         """
         total_loss = 0
-        steps_per_epoch = int(math.ceil(float(dataset.number_of_samples)\
+        steps_per_epoch = int(math.ceil(float(data_set.number_of_samples)\
                                         /float(BATCH_SIZE)))
         f1 = open(OUTDIR + data_set.name + "_final_results", "wb")
         for step in xrange(1, steps_per_epoch+1):
@@ -129,7 +129,7 @@ class run_model:
             _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             # Pack the list of size max_sequence_length to a tensor
             temp = _decoder_states.data
-            temp = temp.numpy()
+            temp = temp.cpu().numpy()
             decoder_states = np.array([np.argmax(i,1) for i in temp])
             # tensor will be converted to [batch_size * sequence_length * symbols]
             ds = np.transpose(decoder_states)
@@ -159,7 +159,7 @@ class run_model:
                                                                         total_examples, False)
         _decoder_states = self.model(train_content, train_query, train_title, total_examples, max_title)
         temp = _decoder_states.data
-        temp = temp.numpy()
+        temp = temp.cpu().numpy()
         decoder_states = np.array([np.argmax(i,1) for i in temp])
         ds = np.transpose(decoder_states)
         true_labels = np.transpose(train_labels)
@@ -219,6 +219,8 @@ def main():
                   limit_encode = LIMIT_ENCODE, limit_decode = LIMIT_DECODE)
     encoder_vocab_size = dataset.length_vocab_encode()
     decoder_vocab_size = dataset.length_vocab_decode()
+    print("Steps per epoch %d" %(int(math.ceil(float(dataset.datasets["train"].number_of_samples)\
+                                        /float(BATCH_SIZE)))))
     #Initialising Model
     embeddings = dataset.vocab.embeddings
     embeddings = torch.Tensor(embeddings).cuda()
