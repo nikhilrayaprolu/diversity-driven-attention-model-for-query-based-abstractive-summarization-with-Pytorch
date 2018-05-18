@@ -43,16 +43,7 @@ class Vocab():
         """
         sentences = []
 
-        if (os.path.exists(embedding_dir + 'vocab_len.pkl')):
-                vocab_len_stored = pickle.load(open(embedding_dir + "vocab_len.pkl"))
-        else:
-                vocab_len_stored = 0
-
-        if (vocab_len_stored == self.len_vocab and os.path.exists(embedding_dir + "embeddings.pkl")):
-                print ("Load file Embeddings, vocab len=", vocab_len_stored)
-                self.embeddings = pickle.load(open(embedding_dir +  "embeddings.pkl"))
-                return None
-
+        
         if (os.path.exists(embedding_dir + 'embeddings') == True):
             model = KeyedVectors.load_word2vec_format(embedding_dir + 'embeddings', binary = False)
             print ("Loading pretriained embeddings")
@@ -285,16 +276,7 @@ class Vocab():
 
 
 
-        if (os.path.exists(embedding_dir + 'vocab_len.pkl')):
-                vocab_len_stored = pickle.load(open(embedding_dir + "vocab_len.pkl"))
-        else:
-                vocab_len_stored = 0
-
-        if vocab_len_stored == self.len_vocab and os.path.exists(embedding_dir + "embeddings.pkl"):
-                self.embeddings = pickle.load(open(embedding_dir + "embeddings.pkl"))
-		#print (self.embeddings)
-                return
-
+        
         for index, word in sorted_list:
 
             if word in self.embeddings_model:
@@ -310,9 +292,7 @@ class Vocab():
         embeddings = np.asarray(embeddings)
         embeddings = embeddings.astype(np.float32)
 
-        pickle.dump(embeddings, open(embedding_dir + "embeddings.pkl", "w"))
-        pickle.dump(self.len_vocab, open(embedding_dir + "vocab_len.pkl", "w"))
-
+        
 
         return embeddings
 
