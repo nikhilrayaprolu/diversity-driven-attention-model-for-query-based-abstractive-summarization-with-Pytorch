@@ -285,8 +285,9 @@ class PadDataset:
 		"""
 
 	#print (embedding_path, limit_encode, limit_decode)
-		filenames_encode = [ working_dir + "train_content", working_dir + "train_query" ]
-		filenames_decode = [ working_dir + "train_summary" ]
+        filenames_encode = [ working_dir + "train_content", working_dir + "test_content", working_dir + "valid_content",
+        					 working_dir + "train_query", working_dir + "valid_query", working_dir + "test_query"  ]
+        filenames_decode = [ working_dir + "train_summary", working_dir + "valid_summary", working_dir + "test_summary"  ]
 
 		self.global_count = 0
 		self.vocab        = Vocab()
