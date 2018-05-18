@@ -230,11 +230,13 @@ def main():
 	print("Steps per epoch %d" %(int(math.ceil(float(dataset.datasets["train"].number_of_samples)\
 										/float(BATCH_SIZE)))))
 	#Initialising Model
-	embeddings = dataset.vocab.embeddings
-	embeddings = torch.Tensor(embeddings).cuda()
-	content_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
-	query_encoder = Encoder(encoder_vocab_size, embeddings, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
-	decoder = Decoder(EMBEDDING_SIZE, embeddings, HIDDEN_SIZE, decoder_vocab_size).cuda()
+	embeddings_encoder = dataset.vocab.embeddings_encoder
+	embeddings_encoder = torch.Tensor(embeddings_encoder).cuda()
+	embeddings_decoder = dataset.vocab.embeddings_decoder
+	embeddings_decoder = torch.Tensor(embeddings_decoder).cuda()
+	content_encoder = Encoder(encoder_vocab_size, embeddings_encoder, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+	query_encoder = Encoder(encoder_vocab_size, embeddings_encoder, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+	decoder = Decoder(EMBEDDING_SIZE, embeddings_decoder, HIDDEN_SIZE, decoder_vocab_size).cuda()
 	seq2seqwattn = Seq2Seq(content_encoder, query_encoder, decoder).cuda()
 
 	run_this = run_model(dataset, seq2seqwattn)
