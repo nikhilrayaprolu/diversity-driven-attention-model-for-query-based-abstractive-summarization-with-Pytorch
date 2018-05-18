@@ -15,7 +15,7 @@ LIMIT_ENCODE = 0
 LIMIT_DECODE = 0
 # Property: working_dir:
 # Path to the folder that contains train/valid/test data
-WORKING_DIR = "../data/2/"
+WORKING_DIR = "../data/1/"
 # Property: batch_size:
 # Batch size for training
 BATCH_SIZE = 64

@@ -49,7 +49,7 @@ class Vocab():
                 vocab_len_stored = 0
 
         if (vocab_len_stored == self.len_vocab and os.path.exists(embedding_dir + "embeddings.pkl")):
-                print ("Load file")
+                print ("Load file Embeddings, vocab len=", vocab_len_stored)
                 self.embeddings = pickle.load(open(embedding_dir +  "embeddings.pkl"))
                 return None
 
