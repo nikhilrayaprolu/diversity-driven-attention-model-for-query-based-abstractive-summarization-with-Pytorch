@@ -6,7 +6,7 @@ EMBEDDING_SIZE = 300
 DIFF_VOCAB = False
 # Property: embedding_path:
 # Path to the pretrained embedding
-EMBEDDING_PATH = "../Embedding/embeddings"
+EMBEDDING_PATH = "../Embedding/"
 #Property: limit_encode:
 # Frequency used as a cutoff for encoder vocab
 LIMIT_ENCODE = 0

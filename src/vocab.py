@@ -43,10 +43,17 @@ class Vocab():
         """
         sentences = []
 
-        
+
+
         if (os.path.exists(embedding_dir + 'embeddings') == True):
-            model = KeyedVectors.load_word2vec_format(embedding_dir + 'embeddings', binary = False)
+            if (os.path.exists(embedding_dir + 'final_embeddings.pkl')):
+                model = pickle.load(open(embedding_dir + "final_embeddings.pkl"))
+            else:
+                print(embedding_dir + 'embeddings')
+                model = KeyedVectors.load_word2vec_format(embedding_dir + 'embeddings', binary = False, unicode_errors='ignore')
+                pickle.dump(model, open(embedding_dir + "final_embeddings.pkl", "w"))
             print ("Loading pretriained embeddings")
+                
 
         else:
             for file in filenames:

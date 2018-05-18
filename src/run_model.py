@@ -176,14 +176,14 @@ class run_model:
 		"""
 		best_val_loss = float('inf')
 		best_val_epoch = 0
-	if os.path.exists(OUTDIR + "/best_model.pt"):
-		self.model.load_state_dict(torch.load('./%s/best_model.pt' %(OUTDIR)))
-		best_val_loss = self.do_eval(self.dataset.datasets["valid"])
-		test_loss = self.do_eval(self.dataset.datasets["test"])
-		print ("Validation Loss:{}".format(best_val_loss))
-		print ("Test Loss:{}".format(test_loss))
-	if os.path.exists(OUTDIR + "/lastepoch.pt"):
-	   	self.model.load_state_dict(torch.load('./%s/lastepoch.pt' %(OUTDIR)))
+		if os.path.exists(OUTDIR + "/best_model.pt"):
+			self.model.load_state_dict(torch.load('./%s/best_model.pt' %(OUTDIR)))
+			best_val_loss = self.do_eval(self.dataset.datasets["valid"])
+			test_loss = self.do_eval(self.dataset.datasets["test"])
+			print ("Validation Loss:{}".format(best_val_loss))
+			print ("Test Loss:{}".format(test_loss))
+		if os.path.exists(OUTDIR + "/lastepoch.pt"):
+	   		self.model.load_state_dict(torch.load('./%s/lastepoch.pt' %(OUTDIR)))
 		for epoch in range(1, MAX_EPOCHS+1):
 			print ("Epoch: " + str(epoch))
 			start = time.time()
@@ -225,6 +225,7 @@ def main():
 	#Dataset
 	dataset = PadDataset(WORKING_DIR, EMBEDDING_SIZE, diff_vocab = DIFF_VOCAB, embedding_path = EMBEDDING_PATH,\
 				  limit_encode = LIMIT_ENCODE, limit_decode = LIMIT_DECODE)
+        print("112")
 	encoder_vocab_size = dataset.length_vocab_encode()
 	decoder_vocab_size = dataset.length_vocab_decode()
 	print("Steps per epoch %d" %(int(math.ceil(float(dataset.datasets["train"].number_of_samples)\
@@ -235,12 +236,18 @@ def main():
 	embeddings_decoder = dataset.vocab.embeddings_decoder
 	embeddings_decoder = torch.Tensor(embeddings_decoder).cuda()
 	content_encoder = Encoder(encoder_vocab_size, embeddings_encoder, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+        print("123")
 	query_encoder = Encoder(encoder_vocab_size, embeddings_encoder, EMBEDDING_SIZE, HIDDEN_SIZE).cuda()
+        print("ddf")
 	decoder = Decoder(EMBEDDING_SIZE, embeddings_decoder, HIDDEN_SIZE, decoder_vocab_size).cuda()
+        print("adsf")
 	seq2seqwattn = Seq2Seq(content_encoder, query_encoder, decoder).cuda()
+        print("adsdf")
 
 	run_this = run_model(dataset, seq2seqwattn)
+        print('rehc')
 	run_this.run_training()
+        print('124124')
 	# run_this.test_batch_dataset()
 	
 
