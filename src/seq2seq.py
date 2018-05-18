@@ -19,8 +19,8 @@ class Encoder(nn.Module):
         self.initialize(embeddings)
 
     def initialize(self, embeddings):
-        # print(embeddings.shape, self.input_size)
-        assert (embeddings.shape[0] == self.input_size)
+        print(embeddings.shape, self.input_size)
+        #assert (embeddings.shape[0] == self.input_size)
         self.embed.weight = nn.Parameter(embeddings)
 
     def forward(self, src, hidden=None):

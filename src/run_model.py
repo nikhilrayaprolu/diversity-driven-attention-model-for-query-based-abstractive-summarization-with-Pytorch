@@ -176,6 +176,14 @@ class run_model:
         """
         best_val_loss = float('inf')
         best_val_epoch = 0
+	if os.path.exists(OUTDIR + "/best_model.pt"):
+	    self.model.load_state_dict(torch.load('./%s/best_model.pt' %(OUTDIR)))
+	    best_val_loss = self.do_eval(self.dataset.datasets["valid"])
+	    test_loss = self.do_eval(self.dataset.datasets["test"])
+            print ("Validation Loss:{}".format(best_val_loss))
+            print ("Test Loss:{}".format(test_loss))
+	if os.path.exists(OUTDIR + "/lastepoch.pt"):
+	   self.model.load_state_dict(torch.load('./%s/lastepoch.pt' %(OUTDIR)))
         for epoch in range(1, MAX_EPOCHS+1):
             print ("Epoch: " + str(epoch))
             start = time.time()
@@ -191,7 +199,7 @@ class run_model:
                     os.makedirs(OUTDIR)
                 torch.save(self.model.state_dict(), './%s/best_model.pt' %(OUTDIR))
             if epoch == MAX_EPOCHS:
-                torch.save(self.model.state_dict(), './%s/seq2seq_lastepoch.pt' %(OUTDIR))
+                torch.save(self.model.state_dict(), './%s/lastepoch.pt' %(OUTDIR))
             if epoch - best_val_epoch > EARLY_STOP:
                 print ("Results are getting no better. Early Stopping")
                 break
