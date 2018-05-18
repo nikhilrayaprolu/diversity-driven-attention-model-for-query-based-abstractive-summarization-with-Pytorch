@@ -180,10 +180,10 @@ class run_model:
 		self.model.load_state_dict(torch.load('./%s/best_model.pt' %(OUTDIR)))
 		best_val_loss = self.do_eval(self.dataset.datasets["valid"])
 		test_loss = self.do_eval(self.dataset.datasets["test"])
-			print ("Validation Loss:{}".format(best_val_loss))
-			print ("Test Loss:{}".format(test_loss))
+		print ("Validation Loss:{}".format(best_val_loss))
+		print ("Test Loss:{}".format(test_loss))
 	if os.path.exists(OUTDIR + "/lastepoch.pt"):
-	   self.model.load_state_dict(torch.load('./%s/lastepoch.pt' %(OUTDIR)))
+	   	self.model.load_state_dict(torch.load('./%s/lastepoch.pt' %(OUTDIR)))
 		for epoch in range(1, MAX_EPOCHS+1):
 			print ("Epoch: " + str(epoch))
 			start = time.time()
