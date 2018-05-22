@@ -35,7 +35,7 @@ class Vocab():
                 which the vocab will be built. This is used when there
                 are no pretrained embeddings present. Then instead of 
                 using random embeddings, Word2Vec algorithm is used 
-		to train the embeddings on the dataset avaliable.
+        to train the embeddings on the dataset avaliable.
                 embedding_size: Dimensions for the embedding to be used.
 
             Returns
@@ -47,11 +47,11 @@ class Vocab():
 
         if (os.path.exists(embedding_dir + 'embeddings') == True):
             if (os.path.exists(embedding_dir + 'final_embeddings.pkl')):
-                model = pickle.load(open(embedding_dir + "final_embeddings.pkl"))
+                model = pickle.load(open(embedding_dir + "final_embeddings.pkl", 'rb'))
             else:
                 print(embedding_dir + 'embeddings')
                 model = KeyedVectors.load_word2vec_format(embedding_dir + 'embeddings', binary = False, unicode_errors='ignore')
-                pickle.dump(model, open(embedding_dir + "final_embeddings.pkl", "w"))
+                pickle.dump(model, open(embedding_dir + "final_embeddings.pkl", "wb"))
             print ("Loading pretriained embeddings")
                 
 
@@ -120,10 +120,10 @@ class Vocab():
 
     def fix_the_frequency(self, limit_encoder=0, limit_decoder=0):
         """ Eliminates the words from the dictionary with 
-	    a frequency less than the limit provided in the 
-	    argument.
+        a frequency less than the limit provided in the 
+        argument.
 
-	    Arguments:
+        Arguments:
             * limit_encoder: The threshold frequency for encoder
             * limit_decoder: The threshold frequency for decoder
 
@@ -258,21 +258,23 @@ class Vocab():
                 * returns the corresponding word
         """
         if index not in self.index_to_word_decode:
+            #print('Unk',index)
             return self.unknown
+        #print(self.index_to_word_decode[index], index)
         return self.index_to_word_decode[index]
 
 
     def get_embeddings(self, embedding_size, index_to_word, embedding_dir):
         """ This function creates an embedding matrix
             of size (vocab_size * embedding_size). The embedding 
-	    for each word is loaded from the embeddings learnt in the 
+        for each word is loaded from the embeddings learnt in the 
             function get_global_embeddings(). 
 
             Arguments:
-		* embedding_size: Dimension size to represent the word.
+        * embedding_size: Dimension size to represent the word.
 
             Returns:
-		* embeddings: Returns the embeddings for the index_to_word
+        * embeddings: Returns the embeddings for the index_to_word
                       dictionary
         """
 
@@ -345,7 +347,7 @@ class Vocab():
         self.embeddings_encoder = self.get_embeddings(embedding_size, self.index_to_word_encode, embedding_path)
         self.embeddings_decoder = self.get_embeddings(embedding_size, self.index_to_word_decode, embedding_path)
 
-	#print(self.word_to_index_decode)
+    #print(self.word_to_index_decode)
         self.len_vocab_encode = len(self.word_to_index_encode)
         self.len_vocab_decode = len(self.word_to_index_decode)
 
