@@ -53,7 +53,7 @@ class Attention(nn.Module):
         attn_energies = self.score(h, encoder_outputs, coverage)
         return F.softmax(attn_energies).unsqueeze(1) #torch upgrade - add dim=1
 
-    def score(self, hidden, encoder_outputs):
+    def score(self, hidden, encoder_outputs, coverage):
         # [B*T*2H]->[B*T*H]
         energy = F.tanh(self.attn(torch.cat([hidden, encoder_outputs, coverage], 2)))
         energy = energy.transpose(1, 2)  # [B*H*T]
