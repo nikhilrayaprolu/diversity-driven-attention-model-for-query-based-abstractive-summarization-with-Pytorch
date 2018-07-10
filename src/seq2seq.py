@@ -44,7 +44,7 @@ class Attention(nn.Module):
         stdv = 1. / math.sqrt(self.v.size(0))
         self.v.data.uniform_(-stdv, stdv)
 
-    def forward(self, hidden, encoder_outputs):
+    def forward(self, hidden, encoder_outputs, coverage):
         timestep = encoder_outputs.size(0)
         h = hidden.repeat(timestep, 1, 1).transpose(0, 1)
 
@@ -98,7 +98,7 @@ class Decoder(nn.Module):
         # Calculate attention weights and apply to encoder outputs
         
         doc_attn_weights = self.doc_attention(torch.cat([last_hidden[0][-1].view(1, -1, self.hidden_size),\
-                                              query_context], 2), encoder_outputs)
+                                              query_context], 2), encoder_outputs, coverage)
         doc_context = doc_attn_weights.bmm(encoder_outputs.transpose(0, 1))  # (B,1,N)
         doc_context = doc_context.transpose(0, 1)  # (1,B,N)
 
@@ -132,12 +132,15 @@ class Seq2Seq(nn.Module):
         hidden = hidden
         distract_hidden = hidden
         output = Variable(trg[0, :])  # sos
-        coverage = Variable(torch.Tensor(b,in_seq).zero_()).cuda()
+        coverage = Variable(torch.Tensor(batch_size, vocab_size).zero_()).cuda() #bxin_seq
+        cov_loss = 0
         for t in range(1, max_len_target):
             output, hidden, distract_hidden, attn_weights = self.decoder(
                     output, hidden, distract_hidden, query_output, encoder_output, coverage)
+            coverage += attn_weights
+            cov_loss += torch.sum(torch.min(attn_weights,coverage))
             outputs[t] = output
             is_teacher = random.random() < teacher_forcing_ratio
             top1 = output.data.max(1)[1]
             output = Variable(trg[t] if is_teacher else top1).cuda()
-        return outputs
+        return outputs, cov_loss
