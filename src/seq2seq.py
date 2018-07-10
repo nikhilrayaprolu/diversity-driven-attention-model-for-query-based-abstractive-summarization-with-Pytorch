@@ -33,10 +33,13 @@ class Encoder(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size, num):
+    def __init__(self, hidden_size, num, coverage=False):
         super(Attention, self).__init__()
         self.hidden_size = hidden_size
-        self.attn = nn.Linear(self.hidden_size * num, hidden_size)
+        if coverage:
+            self.attn = nn.Linear(self.hidden_size * num + 1, hidden_size)
+        else:
+            self.attn = nn.Linear(self.hidden_size * num, hidden_size)
         self.v = nn.Parameter(torch.rand(hidden_size))
         stdv = 1. / math.sqrt(self.v.size(0))
         self.v.data.uniform_(-stdv, stdv)
@@ -44,13 +47,15 @@ class Attention(nn.Module):
     def forward(self, hidden, encoder_outputs):
         timestep = encoder_outputs.size(0)
         h = hidden.repeat(timestep, 1, 1).transpose(0, 1)
+
         encoder_outputs = encoder_outputs.transpose(0, 1)  # [B*T*H]
-        attn_energies = self.score(h, encoder_outputs)
+        coverage = coverage.view(encoder_outputs.size(0), timestep, 1)
+        attn_energies = self.score(h, encoder_outputs, coverage)
         return F.softmax(attn_energies).unsqueeze(1) #torch upgrade - add dim=1
 
     def score(self, hidden, encoder_outputs):
         # [B*T*2H]->[B*T*H]
-        energy = F.tanh(self.attn(torch.cat([hidden, encoder_outputs], 2)))
+        energy = F.tanh(self.attn(torch.cat([hidden, encoder_outputs, coverage], 2)))
         energy = energy.transpose(1, 2)  # [B*H*T]
         v = self.v.repeat(encoder_outputs.size(0), 1).unsqueeze(1)  # [B*1*H]
         energy = torch.bmm(v, energy)  # [B*1*T]
@@ -69,7 +74,7 @@ class Decoder(nn.Module):
         self.embed = nn.Embedding(output_size, embed_size)
         self.dropout = nn.Dropout(dropout, inplace=True)
         self.query_attention = Attention(hidden_size, 2)
-        self.doc_attention = Attention(hidden_size, 3)
+        self.doc_attention = Attention(hidden_size, 3 , True)
         self.gru = nn.LSTM(hidden_size + embed_size, hidden_size,
                           n_layers, dropout=dropout)
         self.distract_hard_lstm = DiverseLSTMCell(hidden_size, hidden_size)
@@ -80,16 +85,18 @@ class Decoder(nn.Module):
         assert (embeddings.size()[1] == self.embed_size)
         self.embed.weight = nn.Parameter(embeddings)
 
-    def forward(self, input, last_hidden, distract_hidden, query_outputs, encoder_outputs):
+    def forward(self, input, last_hidden, distract_hidden, query_outputs, encoder_outputs, coverage):
         # Get the embedding of the current input word (last output word)
         embedded = self.embed(input).unsqueeze(0)  # (1,B,N)
         embedded = self.dropout(embedded)
+        
         # calculate query attention
         query_attn_weights = self.query_attention(last_hidden[0][-1], query_outputs)
         query_context = query_attn_weights.bmm(query_outputs.transpose(0, 1))  # (B,1,N)
         query_context = query_context.transpose(0, 1)  # (1,B,N)
         
         # Calculate attention weights and apply to encoder outputs
+        
         doc_attn_weights = self.doc_attention(torch.cat([last_hidden[0][-1].view(1, -1, self.hidden_size),\
                                               query_context], 2), encoder_outputs)
         doc_context = doc_attn_weights.bmm(encoder_outputs.transpose(0, 1))  # (B,1,N)
@@ -125,9 +132,10 @@ class Seq2Seq(nn.Module):
         hidden = hidden
         distract_hidden = hidden
         output = Variable(trg[0, :])  # sos
+        coverage = Variable(torch.Tensor(b,in_seq).zero_()).cuda()
         for t in range(1, max_len_target):
             output, hidden, distract_hidden, attn_weights = self.decoder(
-                    output, hidden, distract_hidden, query_output, encoder_output)
+                    output, hidden, distract_hidden, query_output, encoder_output, coverage)
             outputs[t] = output
             is_teacher = random.random() < teacher_forcing_ratio
             top1 = output.data.max(1)[1]
