@@ -62,9 +62,10 @@ class run_model:
             #Todo embeddings - glove
             train_labels = Variable(train_labels)
             optimizer.zero_grad()
-            outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+            outputs, cov_loss = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
-                               train_labels[1:].contiguous().view(-1), ignore_index=self.pad_index) #ignore index pad
+                               train_labels[1:].contiguous().view(-1), ignore_index=self.pad_index) + cov_loss #ignore index pad
+            
             loss.backward()
             clip_grad_norm(self.model.parameters(), GRAD_CLIP)
             optimizer.step()
@@ -102,7 +103,7 @@ class run_model:
             train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
             max_content, max_title, max_query = self.dataset.next_batch(data_set,
                                                                         BATCH_SIZE, False)
-            outputs = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+            outputs,_c = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             loss = F.cross_entropy(outputs[1:].view(-1, self.dataset.length_vocab_decode()),
                                    train_labels[1:].contiguous().view(-1), ignore_index=self.pad_index) #ignore index pad
             total_loss += loss.data[0]
@@ -127,7 +128,7 @@ class run_model:
             train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
             max_content, max_title, max_query = self.dataset.next_batch(data_set,
                                                                         BATCH_SIZE, False)
-            _decoder_states = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
+            _decoder_states,_c = self.model(train_content, train_query, train_title, BATCH_SIZE, max_title)
             # Pack the list of size max_sequence_length to a tensor
             temp = _decoder_states.data
             temp = temp.cpu().numpy()
@@ -158,7 +159,7 @@ class run_model:
         train_content, train_title, train_labels, train_query, train_weights, train_content_seq, train_query_seq,\
             max_content, max_title, max_query = self.dataset.next_batch(data_set,
                                                                         total_examples, False)
-        _decoder_states = self.model(train_content, train_query, train_title, total_examples, max_title)
+        _decoder_states, cov_loss = self.model(train_content, train_query, train_title, total_examples, max_title)
         temp = _decoder_states.data
         temp = temp.cpu().numpy()
         decoder_states = np.array([np.argmax(i,1) for i in temp])

@@ -52,7 +52,7 @@ class Vocab():
                 print(embedding_dir + 'embeddings')
                 model = KeyedVectors.load_word2vec_format(embedding_dir + 'embeddings', binary = False, unicode_errors='ignore')
                 pickle.dump(model, open(embedding_dir + "final_embeddings.pkl", "wb"))
-            print ("Loading pretriained embeddings")
+                print ("Loading pretrained embeddings")
                 
 
         else:

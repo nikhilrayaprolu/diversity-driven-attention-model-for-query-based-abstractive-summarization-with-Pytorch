@@ -6,6 +6,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from Models.lstm_diversity import DiverseLSTMCell
 
+
 class Encoder(nn.Module):
     def __init__(self, input_size, embeddings, embed_size, hidden_size,
                  n_layers=1, dropout=0.5):
@@ -32,12 +33,12 @@ class Encoder(nn.Module):
         return outputs, hidden
 
 
-class Attention(nn.Module):
-    def __init__(self, hidden_size, num, coverage=False):
-        super(Attention, self).__init__()
+class CovAttention(nn.Module):
+    def __init__(self, hidden_size, num, coverage=True):
+        super(CovAttention, self).__init__()
         self.hidden_size = hidden_size
         if coverage:
-            self.attn = nn.Linear(self.hidden_size * num + 1, hidden_size)
+            self.attn = nn.Linear(self.hidden_size * (num + 1), hidden_size)
         else:
             self.attn = nn.Linear(self.hidden_size * num, hidden_size)
         self.v = nn.Parameter(torch.rand(hidden_size))
@@ -46,16 +47,46 @@ class Attention(nn.Module):
 
     def forward(self, hidden, encoder_outputs, coverage):
         timestep = encoder_outputs.size(0)
-        h = hidden.repeat(timestep, 1, 1).transpose(0, 1)
-
+        h = hidden.repeat(timestep, 1, 1).transpose(0, 1) #[B*T*2H]
         encoder_outputs = encoder_outputs.transpose(0, 1)  # [B*T*H]
-        coverage = coverage.view(encoder_outputs.size(0), timestep, 1)
+#         print(coverage.size(), encoder_outputs.size()) #B*T, B*T*H
+#         coverage = coverage.view(encoder_outputs.size(0), timestep, 1)
+#         coverage = coverage.repeat(timestep, 1, 1).transpose(0, 1) #[B*T*H]
+        coverage = coverage.view(encoder_outputs.size(0), 
+                                 timestep, 1).repeat(1 ,1, encoder_outputs.size(2))
+        #coverage -[B*T*H]
         attn_energies = self.score(h, encoder_outputs, coverage)
         return F.softmax(attn_energies).unsqueeze(1) #torch upgrade - add dim=1
 
     def score(self, hidden, encoder_outputs, coverage):
         # [B*T*2H]->[B*T*H]
         energy = F.tanh(self.attn(torch.cat([hidden, encoder_outputs, coverage], 2)))
+        energy = energy.transpose(1, 2)  # [B*H*T]
+        v = self.v.repeat(encoder_outputs.size(0), 1).unsqueeze(1)  # [B*1*H]
+        energy = torch.bmm(v, energy)  # [B*1*T]
+        return energy.squeeze(1)  # [B*T]
+
+    
+class Attention(nn.Module):
+    def __init__(self, hidden_size, num):
+        super(Attention, self).__init__()
+        self.hidden_size = hidden_size
+        self.attn = nn.Linear(self.hidden_size * num, hidden_size)
+        self.v = nn.Parameter(torch.rand(hidden_size))
+        stdv = 1. / math.sqrt(self.v.size(0))
+        self.v.data.uniform_(-stdv, stdv)
+
+    def forward(self, hidden, encoder_outputs):
+        timestep = encoder_outputs.size(0)
+        h = hidden.repeat(timestep, 1, 1).transpose(0, 1)
+#         print(h.size(),"attention-h") 
+        encoder_outputs = encoder_outputs.transpose(0, 1)  # [B*T*H]
+        attn_energies = self.score(h, encoder_outputs)
+        return F.softmax(attn_energies).unsqueeze(1) #torch upgrade - add dim=1
+
+    def score(self, hidden, encoder_outputs):
+        # [B*T*2H]->[B*T*H]
+        energy = F.tanh(self.attn(torch.cat([hidden, encoder_outputs], 2)))
         energy = energy.transpose(1, 2)  # [B*H*T]
         v = self.v.repeat(encoder_outputs.size(0), 1).unsqueeze(1)  # [B*1*H]
         energy = torch.bmm(v, energy)  # [B*1*T]
@@ -74,7 +105,7 @@ class Decoder(nn.Module):
         self.embed = nn.Embedding(output_size, embed_size)
         self.dropout = nn.Dropout(dropout, inplace=True)
         self.query_attention = Attention(hidden_size, 2)
-        self.doc_attention = Attention(hidden_size, 3 , True)
+        self.doc_attention = CovAttention(hidden_size, 3 , True)
         self.gru = nn.LSTM(hidden_size + embed_size, hidden_size,
                           n_layers, dropout=dropout)
         self.distract_hard_lstm = DiverseLSTMCell(hidden_size, hidden_size)
@@ -132,14 +163,17 @@ class Seq2Seq(nn.Module):
         hidden = hidden
         distract_hidden = hidden
         output = Variable(trg[0, :])  # sos
-        coverage = Variable(torch.Tensor(batch_size, vocab_size).zero_()).cuda() #bxin_seq
+#         print(content_src.size()) #T*B
+        coverage = Variable(torch.zeros(batch_size, content_src.size(0))).cuda() #BxT
         cov_loss = 0
         for t in range(1, max_len_target):
             output, hidden, distract_hidden, attn_weights = self.decoder(
                     output, hidden, distract_hidden, query_output, encoder_output, coverage)
-            coverage += attn_weights
-            cov_loss += torch.sum(torch.min(attn_weights,coverage))
-            outputs[t] = output
+#             print(attn_weights.size(), "attn_weights size") #B*1*T
+            attn = attn_weights.view(batch_size, content_src.size(0)) #B*T 
+            cov_loss = cov_loss + torch.sum(torch.min(attn,coverage))
+            coverage = coverage + attn.clone()
+            outputs[t] = output.clone() #Removing inplace error
             is_teacher = random.random() < teacher_forcing_ratio
             top1 = output.data.max(1)[1]
             output = Variable(trg[t] if is_teacher else top1).cuda()
